@@ -1,4 +1,5 @@
 from __future__ import division
+import random
 import math
 import time
 import tqdm
@@ -9,6 +10,13 @@ from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+
+
+def set_random_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
 
 
 def to_cpu(tensor):
@@ -246,6 +254,11 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         image_pred = image_pred[(-score).argsort()]
         class_confs, class_preds = image_pred[:, 5:].max(1, keepdim=True)
         detections = torch.cat((image_pred[:, :5], class_confs.float(), class_preds.float()), 1)
+        #
+        # # max nms number
+        # max_nms_num = 200
+        # detections = detections[0:max_nms_num, :]
+
         # Perform non-maximum suppression
         keep_boxes = []
         while detections.size(0):
@@ -266,8 +279,9 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
 
 def build_targets(pred_boxes, pred_cls, target, anchors, ignore_thres):
 
-    ByteTensor = torch.cuda.ByteTensor if pred_boxes.is_cuda else torch.ByteTensor
+    # ByteTensor = torch.cuda.ByteTensor if pred_boxes.is_cuda else torch.ByteTensor
     FloatTensor = torch.cuda.FloatTensor if pred_boxes.is_cuda else torch.FloatTensor
+    BoolTensor = torch.cuda.BoolTensor if pred_boxes.is_cuda else torch.BoolTensor
 
     nB = pred_boxes.size(0)
     nA = pred_boxes.size(1)
@@ -275,8 +289,10 @@ def build_targets(pred_boxes, pred_cls, target, anchors, ignore_thres):
     nG = pred_boxes.size(2)
 
     # Output tensors
-    obj_mask = ByteTensor(nB, nA, nG, nG).fill_(0)
-    noobj_mask = ByteTensor(nB, nA, nG, nG).fill_(1)
+    # obj_mask = ByteTensor(nB, nA, nG, nG).fill_(0)
+    # noobj_mask = ByteTensor(nB, nA, nG, nG).fill_(1)
+    obj_mask = BoolTensor(nB, nA, nG, nG).fill_(0)
+    noobj_mask = BoolTensor(nB, nA, nG, nG).fill_(1)
     class_mask = FloatTensor(nB, nA, nG, nG).fill_(0)
     iou_scores = FloatTensor(nB, nA, nG, nG).fill_(0)
     tx = FloatTensor(nB, nA, nG, nG).fill_(0)

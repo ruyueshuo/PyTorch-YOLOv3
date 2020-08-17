@@ -20,11 +20,14 @@ from torch.autograd import Variable
 import torch.optim as optim
 
 
-def evaluate(model, path, iou_thres, conf_thres, nms_thres, img_size, batch_size):
+def evaluate(model, path, iou_thres, conf_thres, nms_thres, img_size, batch_size, mode='fire', data_config=None):
     model.eval()
 
     # Get dataloader
-    dataset = ListDataset(path, img_size=img_size, augment=False, multiscale=False)
+    if mode=='fire':
+        dataset = FireDataset(path, data_config['data'], img_size=img_size, augment=False, multiscale=False)
+    else:
+        dataset = ListDataset(path, img_size=img_size, augment=False, multiscale=False)
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, shuffle=False, num_workers=1, collate_fn=dataset.collate_fn
     )
@@ -50,7 +53,10 @@ def evaluate(model, path, iou_thres, conf_thres, nms_thres, img_size, batch_size
         sample_metrics += get_batch_statistics(outputs, targets, iou_threshold=iou_thres)
 
     # Concatenate sample statistics
-    true_positives, pred_scores, pred_labels = [np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
+    if sample_metrics:
+        true_positives, pred_scores, pred_labels = [np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
+    else:
+        true_positives, pred_scores, pred_labels = np.array([]), np.array([]), np.array([])
     precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_scores, pred_labels, labels)
 
     return precision, recall, AP, f1, ap_class

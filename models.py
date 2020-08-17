@@ -128,6 +128,8 @@ class YOLOLayer(nn.Module):
         # Calculate offsets for each grid
         self.grid_x = torch.arange(g).repeat(g, 1).view([1, 1, g, g]).type(FloatTensor)
         self.grid_y = torch.arange(g).repeat(g, 1).t().view([1, 1, g, g]).type(FloatTensor)
+        self.grid_x = torch.arange(g).repeat(g, 1).view([1, 1, g, g]).float().cuda()
+        self.grid_y = torch.arange(g).repeat(g, 1).t().view([1, 1, g, g]).float().cuda()
         self.scaled_anchors = FloatTensor([(a_w / self.stride, a_h / self.stride) for a_w, a_h in self.anchors])
         self.anchor_w = self.scaled_anchors[:, 0:1].view((1, self.num_anchors, 1, 1))
         self.anchor_h = self.scaled_anchors[:, 1:2].view((1, self.num_anchors, 1, 1))
@@ -187,6 +189,10 @@ class YOLOLayer(nn.Module):
                 anchors=self.scaled_anchors,
                 ignore_thres=self.ignore_thres,
             )
+
+            # remove user warning
+            obj_mask = obj_mask.bool()
+            noobj_mask = noobj_mask.bool()
 
             # Loss : Mask outputs to ignore non-existing objects (except with conf. loss)
             loss_x = self.mse_loss(x[obj_mask], tx[obj_mask])

@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Time    : 2020/8/13 16:23
+# @Author  : FengDa
+# @File    : train_fire.py
+# @Software: PyCharm
 from __future__ import division
 
 from models import *
@@ -21,27 +27,38 @@ from torchvision import datasets
 from torchvision import transforms
 from torch.autograd import Variable
 import torch.optim as optim
+from torch.optim import lr_scheduler
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
     parser.add_argument("--batch_size", type=int, default=8, help="size of each image batch")
     parser.add_argument("--gradient_accumulations", type=int, default=2, help="number of gradient accums before step")
-    parser.add_argument("--model_def", type=str, default="config/yolov3.cfg", help="path to model definition file")
-    parser.add_argument("--data_config", type=str, default="config/coco.data", help="path to data config file")
-    parser.add_argument("--pretrained_weights", type=str, help="if specified starts from checkpoint model")
+    parser.add_argument("--model_def", type=str, default="config/yolov3-custom.cfg", help="path to model definition file")
+    parser.add_argument("--data_config", type=str, default="config/fire.data", help="path to data config file")
+    parser.add_argument("--pretrained_weights", type=str,
+                        # default="checkpoints/fire_det/yolov3_fire_det_ckpt_14_0.21042.pth",
+                        default=None,
+                        help="if specified starts from checkpoint model")
     parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
-    parser.add_argument("--img_size", type=int, default=416, help="size of each image dimension")
-    parser.add_argument("--checkpoint_interval", type=int, default=1, help="interval between saving model weights")
+    parser.add_argument("--img_size", type=int, default=640, help="size of each image dimension")
+    parser.add_argument("--checkpoint_interval", type=int, default=2, help="interval between saving model weights")
     parser.add_argument("--evaluation_interval", type=int, default=1, help="interval evaluations on validation set")
     parser.add_argument("--compute_map", default=False, help="if True computes mAP every tenth batch")
     parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
+    parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
+    parser.add_argument("--seed", type=int, default=41, help="learning rate")
     opt = parser.parse_args()
     print(opt)
 
     logger = Logger("logs")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.cuda.set_device(1)
+    # os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+    # device = "cuda:0"
+
+    set_random_seed(opt.seed)
 
     os.makedirs("output", exist_ok=True)
     os.makedirs("checkpoints", exist_ok=True)
@@ -50,11 +67,13 @@ if __name__ == "__main__":
     data_config = parse_data_config(opt.data_config)
     train_path = data_config["train"]
     valid_path = data_config["valid"]
-    class_names = load_classes(data_config["names"])
+    # class_names = load_classes(data_config["names"])
+    class_names = ['fire']
 
     # Initiate model
     model = Darknet(opt.model_def).to(device)
     model.apply(weights_init_normal)
+    # model = nn.DataParallel(model, device_ids=[0,1]).modules()
 
     # If specified we start from checkpoint
     if opt.pretrained_weights:
@@ -64,7 +83,7 @@ if __name__ == "__main__":
             model.load_darknet_weights(opt.pretrained_weights)
 
     # Get dataloader
-    dataset = ListDataset(train_path, augment=True, multiscale=opt.multiscale_training)
+    dataset = FireDataset(train_path, data_config['data'], augment=True, multiscale=opt.multiscale_training)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=opt.batch_size,
@@ -74,7 +93,8 @@ if __name__ == "__main__":
         collate_fn=dataset.collate_fn,
     )
 
-    optimizer = torch.optim.Adam(model.parameters())
+    optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40, 60], gamma=0.5)
 
     metrics = [
         "grid_size",
@@ -158,6 +178,8 @@ if __name__ == "__main__":
                 nms_thres=0.5,
                 img_size=opt.img_size,
                 batch_size=8,
+                mode='fire',
+                data_config=data_config
             )
             evaluation_metrics = [
                 ("val_precision", precision.mean()),
@@ -174,5 +196,7 @@ if __name__ == "__main__":
             print(AsciiTable(ap_table).table)
             print(f"---- mAP {AP.mean()}")
 
+        scheduler.step()
+
         if epoch % opt.checkpoint_interval == 0:
-            torch.save(model.state_dict(), f"checkpoints/yolov3_ckpt_%d.pth" % epoch)
+            torch.save(model.state_dict(), f"checkpoints/fire_det/yolov3_fire_det_ckpt_%d_%.5f.pth" % (epoch, AP[0]))

@@ -1,0 +1,5 @@
+classes= 1
+data=/home/ubuntu/datasets/fire_detection/VOC2020
+train=/home/ubuntu/datasets/fire_detection/VOC2020/ImageSets/Main/train.txt
+valid=/home/ubuntu/datasets/fire_detection/VOC2020/ImageSets/Main/valid.txt
+names=/home/ubuntu/datasets/fire_detection/VOC2020/ImageSets/Main/fire.names
