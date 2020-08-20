@@ -47,7 +47,25 @@ def save_txt(data, file):
         f.close()
 
 
+def add_annotation(img_path, ann_path):
+    img_list = os.listdir(img_path)
+    img_list = [img[:-4] for img in img_list]
+    ann_list = os.listdir(ann_path)
+    ann_list = [ann[:-4] for ann in ann_list]
+
+    subtraction = list(set(img_list).difference(set(ann_list)))
+    for img in subtraction:
+        ann_file = os.path.join(ann_path, img + ".txt")
+        with open(ann_file, 'w') as f:
+            f.write('')
+        f.close()
+
+
 if __name__ == '__main__':
     path = '/home/ubuntu/datasets/fire_detection/VOC2020/JPEGImages'
     save_path = '/home/ubuntu/datasets/fire_detection/VOC2020/ImageSets/Main'
     split_dataset(path, save_path)
+
+    # img_path = "/home/ubuntu/datasets/fire_detection/VOC2020/JPEGImages"
+    # ann_path = "/home/ubuntu/datasets/fire_detection/VOC2020/labels"
+    # add_annotation(img_path, ann_path)

@@ -23,10 +23,16 @@ from matplotlib.ticker import NullLocator
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image_folder", type=str, default="data/samples", help="path to dataset")
-    parser.add_argument("--model_def", type=str, default="config/yolov3.cfg", help="path to model definition file")
-    parser.add_argument("--weights_path", type=str, default="weights/yolov3.weights", help="path to weights file")
-    parser.add_argument("--class_path", type=str, default="data/coco.names", help="path to class label file")
+    parser.add_argument("--image_folder", type=str, default="/home/ubuntu/datasets/fire_detection/VOC2020/test", help="path to dataset")
+    parser.add_argument("--model_def", type=str, default="config/yolov3-fire.cfg", help="path to model definition file")
+    parser.add_argument("--weights_path", type=str,
+                        # default="weights/yolov3.weights",
+                        default="/home/ubuntu/code/fengda/PyTorch-YOLOv3/checkpoints/fire_det/yolov3_fire_det_ckpt_60_0.42646.pth",
+                        help="path to weights file")
+    parser.add_argument("--class_path", type=str,
+                        # default="data/coco.names",
+                        default="/home/ubuntu/datasets/fire_detection/VOC2020/ImageSets/Main/fire.names",
+                        help="path to class label file")
     parser.add_argument("--conf_thres", type=float, default=0.8, help="object confidence threshold")
     parser.add_argument("--nms_thres", type=float, default=0.4, help="iou thresshold for non-maximum suppression")
     parser.add_argument("--batch_size", type=int, default=1, help="size of the batches")
@@ -60,6 +66,8 @@ if __name__ == "__main__":
     )
 
     classes = load_classes(opt.class_path)  # Extracts class labels from file
+    fp = open(opt.class_path, "r")
+    classes = fp.read().split("\n")
 
     Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 

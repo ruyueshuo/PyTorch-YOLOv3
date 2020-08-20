@@ -31,14 +31,15 @@ from torch.optim import lr_scheduler
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
+    parser.add_argument("--epochs", type=int, default=20, help="number of epochs")
     parser.add_argument("--batch_size", type=int, default=8, help="size of each image batch")
     parser.add_argument("--gradient_accumulations", type=int, default=2, help="number of gradient accums before step")
-    parser.add_argument("--model_def", type=str, default="config/yolov3-fire.cfg", help="path to model definition file")
-    parser.add_argument("--data_config", type=str, default="config/fire.data", help="path to data config file")
+    parser.add_argument("--model_def", type=str, default="config/yolov3-safety-helmet.cfg", help="path to model definition file")
+    parser.add_argument("--data_config", type=str, default="config/safety-helmet.data", help="path to data config file")
     parser.add_argument("--pretrained_weights", type=str,
-                        default="/home/ubuntu/code/fengda/PyTorch-YOLOv3/checkpoints/fire_det/20200818-104346/yolov3_fire_det_ckpt_14_0.44713.pth",
+                        default="/home/ubuntu/code/fengda/PyTorch-YOLOv3/checkpoints/safety-helmet/20200819-113615/yolov3_safety_helmet_det_ckpt_26_0.77371.pth",
                         # default=None,
+                        # default="/home/ubuntu/code/fengda/PyTorch-YOLOv3/weights/yolov3.weights",
                         # default="/home/ubuntu/code/fengda/PyTorch-YOLOv3/checkpoints/fire_det/latest.pth",
                         help="if specified starts from checkpoint model")
     parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
@@ -47,9 +48,9 @@ if __name__ == "__main__":
     parser.add_argument("--evaluation_interval", type=int, default=1, help="interval evaluations on validation set")
     parser.add_argument("--compute_map", default=False, help="if True computes mAP every tenth batch")
     parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
-    parser.add_argument("--lr", type=float, default=0.00005, help="learning rate")
+    parser.add_argument("--lr", type=float, default=0.000025, help="learning rate")
     parser.add_argument("--seed", type=int, default=41, help="learning rate")
-    parser.add_argument("--output_folder", type=str, default='checkpoints/fire_det/', help="learning rate")
+    parser.add_argument("--output_folder", type=str, default='checkpoints/safety-helmet/', help="learning rate")
     opt = parser.parse_args()
     print(opt)
 
@@ -75,7 +76,7 @@ if __name__ == "__main__":
     train_path = data_config["train"]
     valid_path = data_config["valid"]
     # class_names = load_classes(data_config["names"])
-    class_names = ['fire']
+    class_names = ['safety-helmet', 'person']
 
     # Initiate model
     model = Darknet(opt.model_def).to(device)
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
-    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40, 60], gamma=0.5)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamma=0.5)
 
     metrics = [
         "grid_size",
@@ -206,4 +207,4 @@ if __name__ == "__main__":
         scheduler.step()
 
         if epoch % opt.checkpoint_interval == 0:
-            torch.save(model.state_dict(), os.path.join(opt.output_folder, "yolov3_fire_det_ckpt_%d_%.5f.pth" % (epoch, AP[0])))
+            torch.save(model.state_dict(), os.path.join(opt.output_folder, "yolov3_safety_helmet_det_ckpt_%d_%.5f.pth" % (epoch, AP.mean())))

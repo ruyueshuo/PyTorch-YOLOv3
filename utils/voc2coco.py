@@ -11,10 +11,10 @@ from os.path import join
 fire-detect:
 VOC2020 to yolo format code
 '''
-sets = [('2020', 'train'), ('2020', 'valid')]
-classes = ["fire"]
+sets = [('2028', 'trainval'), ('2028', 'test')]
+classes = ["hat", "person"]
 # VOC2020 folder root
-data_root = r'/home/ubuntu/datasets/fire_detection/'
+data_root = r'/home/ubuntu/datasets/VOC2028-安全帽/'
 # voc的训练txt 验证txt 必须在VOC*** 以及目录下 不能在Main目录下面；它是在统计目录下
 def convert(size, box):
     dw = 1./(size[0])
@@ -80,3 +80,16 @@ for name in names:
     f.write(os.path.join(root, name)+'\n')
     f.close()
 # 6：4 -> train.txt test.txt
+
+
+def change_file_extension(path, ext):
+    # path = "/home/ubuntu/datasets/VOC2028-安全帽/VOC2028/JPEGImages"
+    img_list = os.listdir(path)
+    for img in img_list:
+        filename = os.path.join(path, img)
+        portion = os.path.splitext(filename)  # 分离文件名与扩展名
+        # 如果后缀是jpg
+        if portion[1] != ext:
+            # 重新组合文件名和后缀名
+            newname = portion[0] + ext
+            os.rename(filename, newname)
